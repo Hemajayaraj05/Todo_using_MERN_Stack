@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Toaster, Intent } from "@blueprintjs/core";
 import './App.css';
@@ -13,6 +12,7 @@ export default function Todo() {
   const [editId, setEditId] = useState(-1);
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
+  const [createdIds, setCreatedIds] = useState([]);
 
   const apiURL = "http://localhost:3000";
 
@@ -26,22 +26,16 @@ export default function Todo() {
         },
         body: JSON.stringify({ title, description }),
       })
-        .then((res) => {
-          if (res.ok) {
-            setTodos([...todos, { title, description }]);
-            AppToaster.show({
-              message: "Item Created Successfully",
-              intent: Intent.SUCCESS,
-            });
-            setTitle(""); 
-            setDescription(""); 
-          } else {
-            AppToaster.show({
-              message: "Unable to create a Todo Item",
-              intent: Intent.DANGER,
-            });
-            setError("Unable to create a Todo Item");
-          }
+        .then((res) => res.json())
+        .then((newTodo) => {
+          setTodos([...todos, newTodo]);
+          setCreatedIds([...createdIds, newTodo._id]);
+          AppToaster.show({
+            message: "Item Created Successfully",
+            intent: Intent.SUCCESS,
+          });
+          setTitle("");
+          setDescription("");
         })
         .catch(() => {
           AppToaster.show({
@@ -62,6 +56,7 @@ export default function Todo() {
       .then((res) => res.json())
       .then((res) => {
         setTodos(res);
+        setCreatedIds([]); // Reset the createdIds on refresh
       });
   };
 
@@ -88,9 +83,9 @@ export default function Todo() {
               message: "Item Updated Successfully",
               intent: Intent.PRIMARY,
             });
-            setEditId(-1); 
-            setEditTitle(""); 
-            setEditDescription(""); 
+            setEditId(-1);
+            setEditTitle("");
+            setEditDescription("");
           } else {
             AppToaster.show({
               message: "Unable to update Todo Item",
@@ -110,35 +105,35 @@ export default function Todo() {
   };
 
   const handleEdit = (item) => {
-    setEditId(item._id);
-    setEditTitle(item.title);
-    setEditDescription(item.description);
+    if (!createdIds.includes(item._id)) {
+      setEditId(item._id);
+      setEditTitle(item.title);
+      setEditDescription(item.description);
+    }
   };
 
   const handleEditCancel = () => {
     setEditId(-1);
     setEditTitle("");
-    setEditDescription(""); 
+    setEditDescription("");
   };
 
-
-  const handleDelete=(id)=>{
-    if(window.confirm('Are you sure u want to delete'));
-    fetch(apiURL+"/todos/"+id,{
-      method:"DELETE"
-    })
-    .then(()=>{
-      const updatedTodos=todos.filter((item)=> item._id!==id)
-      setTodos(updatedTodos);
-    })
-
-  }
-
+  const handleDelete = (id) => {
+    if (window.confirm('Are you sure you want to delete?')) {
+      fetch(apiURL + "/todos/" + id, {
+        method: "DELETE"
+      })
+        .then(() => {
+          const updatedTodos = todos.filter((item) => item._id !== id);
+          setTodos(updatedTodos);
+        });
+    }
+  };
 
   return (
     <>
       <div className="row p-3 bg-danger bg-gradient text-light">
-        <h1 className="text-center">Go with a Flow  Using MERN Stack</h1>
+        <h1 className="text-center">Go with a Flow Using MERN Stack</h1>
       </div>
       <div className="row">
         <h3>Add Item</h3>
@@ -167,51 +162,53 @@ export default function Todo() {
       <div className="row mt-3">
         <h3>Tasks</h3>
         <div className="d-flex justify-content-center align-items-center">
-        <ul className="list-group">
-          {todos.map((item) => (
-            <li key={item._id} className="list-group-item bg-info d-flex justify-content-between my-2">
-              <div className="d-flex flex-column gap-2 me-2">
-                {editId === -1 || editId !== item._id ? (
-                  <>
-                    <span className="fw-bold">{item.title}</span>
-                    <span>{item.description}</span>
-                  </>
-                ) : (
-                  <div className="form-group d-flex gap-2">
-                    <input
-                      placeholder="Title"
-                      value={editTitle}
-                      className="form-control"
-                      onChange={(e) => setEditTitle(e.target.value)}
-                      type="text"
-                    />
-                    <input
-                      placeholder="Description"
-                      value={editDescription}
-                      className="form-control"
-                      onChange={(e) => setEditDescription(e.target.value)}
-                      type="text"
-                    />
-                  </div>
-                )}
-              </div>
+          <ul className="list-group">
+            {todos.map((item) => (
+              <li key={item._id} className="list-group-item bg-info d-flex justify-content-between my-2">
+                <div className="d-flex flex-column gap-2 me-2">
+                  {editId === -1 || editId !== item._id ? (
+                    <>
+                      <span className="fw-bold">{item.title}</span>
+                      <span>{item.description}</span>
+                    </>
+                  ) : (
+                    <div className="form-group d-flex gap-2">
+                      <input
+                        placeholder="Title"
+                        value={editTitle}
+                        className="form-control"
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        type="text"
+                      />
+                      <input
+                        placeholder="Description"
+                        value={editDescription}
+                        className="form-control"
+                        onChange={(e) => setEditDescription(e.target.value)}
+                        type="text"
+                      />
+                    </div>
+                  )}
+                </div>
 
-              <div className="d-flex gap-2">
-                {editId === -1 || editId !== item._id ? (
-                  <button className="btn btn-warning" onClick={() => handleEdit(item)}>Edit</button>
-                ) : (
-                  <button className="btn btn-warning" onClick={handleUpdate}>Update</button>
-                )}
-                {editId === -1 || editId !== item._id ? (
-                  <button className="btn btn-danger" onClick={()=>{handleDelete(item._id)}}>Delete</button>
-                ) : (
-                  <button className="btn btn-danger" onClick={handleEditCancel}>Cancel</button>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
-      </div>
+                <div className="d-flex gap-2">
+                  {editId === -1 || editId !== item._id ? (
+                    <button className="btn btn-warning" onClick={() => handleEdit(item)} disabled={createdIds.includes(item._id)}>
+                      Edit
+                    </button>
+                  ) : (
+                    <button className="btn btn-warning" onClick={handleUpdate}>Update</button>
+                  )}
+                  {editId === -1 || editId !== item._id ? (
+                    <button className="btn btn-danger" onClick={() => { handleDelete(item._id); }}>Delete</button>
+                  ) : (
+                    <button className="btn btn-danger" onClick={handleEditCancel}>Cancel</button>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </>
   );
